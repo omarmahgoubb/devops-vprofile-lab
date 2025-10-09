@@ -10,6 +10,13 @@ Next steps will add:
 - **project-2-automation/** — shell-scripted provisioning with Vagrant provisioners.
 - **project-3-monitoring-nagios/** — Nagios Core + NRPE checks for the same stack.
 
+
+## Interactive walkthrough
+- **Code2Tutorial (auto-generated guide)** — A click‑through tutorial for this repo with chapters and code/command blocks:  
+  👉 https://code2tutorial.com/tutorial/3cab15e6-750e-4e20-a74c-2ace648c7745/index.md  
+  *What it does:* uses the Code2Tutorial engine to analyze the repo and render a human‑readable walkthrough that explains structure, components, and setup so newcomers can follow along quickly.
+
+
 ## Stack & order
 - **Services**: Nginx (web), Tomcat (app), RabbitMQ (broker), Memcached (cache), MySQL (DB).
 - **Bring-up order**: MySQL → Memcached → RabbitMQ → Tomcat → Nginx (so dependencies are ready first).
