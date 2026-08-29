@@ -1,0 +1,48 @@
+#!/bin/bash
+# NRPE agent + CPU/RAM checks for CentOS Stream 9 clients.
+# Called after the service provision script (db/mc/rmq/app).
+
+# sudo dnf update -y
+
+echo "Installing NRPE and plugins..."
+sudo dnf install -y nrpe nagios-plugins-all --skip-broken
+sudo dnf install -y nagios-plugins-load nagios-plugins-swap nagios-plugins-disk nagios-plugins-procs
+
+if ! grep -q '192.168.56.10' /etc/nagios/nrpe.cfg 2>/dev/null; then
+  echo "allowed_hosts=127.0.0.1,192.168.56.10" | sudo tee -a /etc/nagios/nrpe.cfg
+fi
+
+echo "Installing check_ram plugin..."
+sudo tee /usr/lib64/nagios/plugins/check_ram >/dev/null <<'EOF'
+#!/bin/bash
+avail_pct=$(free | awk '/^Mem:/ {printf("%.0f", $7*100/$2)}')
+warn=${1:-20}
+crit=${2:-10}
+if [ "$avail_pct" -le "$crit" ]; then
+  echo "RAM CRITICAL - ${avail_pct}% available | ram_avail=${avail_pct}%;${warn};${crit}"
+  exit 2
+elif [ "$avail_pct" -le "$warn" ]; then
+  echo "RAM WARNING - ${avail_pct}% available | ram_avail=${avail_pct}%;${warn};${crit}"
+  exit 1
+fi
+echo "RAM OK - ${avail_pct}% available | ram_avail=${avail_pct}%;${warn};${crit}"
+exit 0
+EOF
+sudo chmod +x /usr/lib64/nagios/plugins/check_ram
+
+if ! grep -q 'command\[check_load\]' /etc/nagios/nrpe.cfg; then
+  sudo tee -a /etc/nagios/nrpe.cfg >/dev/null <<'EOF'
+command[check_load]=/usr/lib64/nagios/plugins/check_load -w 1.0,1.0,1.0 -c 2.0,2.0,2.0
+command[check_ram]=/usr/lib64/nagios/plugins/check_ram 20 10
+EOF
+fi
+
+sudo systemctl enable nrpe
+sudo systemctl restart nrpe
+
+sudo systemctl enable firewalld
+sudo systemctl start firewalld
+sudo firewall-cmd --add-port=5666/tcp --permanent
+sudo firewall-cmd --reload
+
+echo "NRPE agent (CPU/RAM) configured."

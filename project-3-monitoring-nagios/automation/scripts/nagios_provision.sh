@@ -1,25 +1,29 @@
 #!/bin/bash
 
-sudo -i
-
-# Install prerequisites and update system
-yum install -y epel-release
 # yum update -y
+# dnf update -y
 
-yum install -y nagios nagios-plugins-all nrpe httpd --skip-broken
+echo "Installing Nagios Core, plugins, NRPE plugin, and Apache..."
+yum install -y epel-release
+yum install -y nagios nagios-plugins-all nrpe nagios-plugins-nrpe httpd --skip-broken
 
-# Enable and start required services
-systemctl enable httpd && systemctl start httpd
-systemctl enable nagios && systemctl start nagios
+echo "Enabling and starting httpd and nagios..."
+systemctl enable httpd
+systemctl start httpd
+systemctl enable nagios
+systemctl start nagios
 systemctl start firewalld.service
 
-# Configure firewall
+echo "Configuring firewall..."
 firewall-cmd --add-service=http --permanent
 firewall-cmd --add-port=5666/tcp --permanent
 firewall-cmd --reload
 
-# Add monitored hosts to Nagios configuration
-cat <<EOL >> /etc/nagios/objects/clients.cfg
+echo "Setting nagiosadmin web password (admin123)..."
+htpasswd -b -c /etc/nagios/passwd nagiosadmin admin123
+
+echo "Writing monitored hosts..."
+cat >/etc/nagios/objects/clients.cfg <<'EOL'
 define host {
   use             linux-server
   host_name       db01
@@ -51,8 +55,8 @@ define host {
 }
 EOL
 
-# Add service definitions
-cat <<EOL >> /etc/nagios/objects/services.cfg
+echo "Writing ping, CPU, and RAM services..."
+cat >/etc/nagios/objects/services.cfg <<'EOL'
 define service{
     use                     generic-service
     host_name               db01
@@ -117,22 +121,38 @@ define service{
     notification_interval   30
     notification_period     24x7
 }
-EOL
 
-# Add NRPE command definition
-cat <<EOL >> /etc/nagios/objects/commands.cfg
-define command {
-    command_name    check_nrpe
-    command_line    \$USER1\$/check_nrpe -H \$HOSTADDRESS\$ -c \$ARG1\$
+define service{
+    use                     generic-service
+    host_name               db01,mc01,rmq01,app01,web01
+    service_description     CPU Load
+    check_command           check_nrpe!check_load
+}
+
+define service{
+    use                     generic-service
+    host_name               db01,mc01,rmq01,app01,web01
+    service_description     RAM
+    check_command           check_nrpe!check_ram
 }
 EOL
 
-# Update Nagios configuration
-echo "cfg_file=/etc/nagios/objects/services.cfg" >> /etc/nagios/nagios.cfg
-echo "cfg_file=/etc/nagios/objects/clients.cfg" >> /etc/nagios/nagios.cfg
+if ! grep -q 'command_name[[:space:]]*check_nrpe' /etc/nagios/objects/commands.cfg; then
+  cat >>/etc/nagios/objects/commands.cfg <<'EOL'
+define command {
+    command_name    check_nrpe
+    command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$
+}
+EOL
+fi
 
-# Restart Nagios to apply changes
+grep -q 'objects/clients.cfg' /etc/nagios/nagios.cfg || echo "cfg_file=/etc/nagios/objects/clients.cfg" >> /etc/nagios/nagios.cfg
+grep -q 'objects/services.cfg' /etc/nagios/nagios.cfg || echo "cfg_file=/etc/nagios/objects/services.cfg" >> /etc/nagios/nagios.cfg
+
+echo "Validating Nagios configuration..."
+nagios -v /etc/nagios/nagios.cfg
 systemctl restart nagios
 
-# Confirmation message
 echo "Nagios services and commands configuration updated successfully."
+echo "Web UI: http://192.168.56.10/nagios  (nagiosadmin / admin123)"
+echo "Open Current Status -> Services for CPU Load and RAM (Hosts shows ping only)."

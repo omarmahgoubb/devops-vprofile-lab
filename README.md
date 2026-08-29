@@ -4,9 +4,9 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 
 ## What’s inside
 
-- **[project-1-manual/](project-1-manual/)** — SSH into each VM and run the commands by hand.
+- **[project-1-manual/](project-1-manual/)** — SSH into each VM and run the commands by hand (five app VMs).
 - **[project-2-automation/](project-2-automation/)** — the same stack, provisioned by Vagrant shell scripts.
-- **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — Nagios Core (`mon01`) pinging the five app VMs.
+- **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -18,9 +18,9 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 | `rmq01` | RabbitMQ (5672) | 192.168.56.13 | CentOS Stream 9 |
 | `app01` | Tomcat + vprofile WAR (8080) | 192.168.56.12 | CentOS Stream 9 |
 | `web01` | Nginx reverse proxy (80 → `app01:8080`) | 192.168.56.11 | Ubuntu 22.04 |
-| `mon01` | Nagios (Project 3) | 192.168.56.16 | Rocky 9 |
+| `nagios` | Nagios Core (Project 3) | 192.168.56.10 | CentOS Stream 9 |
 
-Bring-up order: **MariaDB → Memcached → RabbitMQ → Tomcat → Nginx**.
+Bring-up order: **MariaDB → Memcached → RabbitMQ → Tomcat → Nginx** (then **Nagios** in Project 3).
 
 Client → `http://192.168.56.11` (Nginx) → `app01:8080` (Tomcat) → `db01` / `mc01` / `rmq01`.
 
@@ -29,7 +29,9 @@ Client → `http://192.168.56.11` (Nginx) → `app01:8080` (Tomcat) → `db01` /
 - VirtualBox and Vagrant
 - `vagrant plugin install vagrant-hostmanager`
 
-Do **not** run Project 1 and Project 2 at the same time. They share the same IPs.
+Do **not** run Project 1, Project 2, and Project 3 at the same time. They share `192.168.56.11`–`.15`.
+
+Use **Administrator** PowerShell on Windows so hostmanager can update the hosts file.
 
 ## Quickstart — Project 1 (manual)
 
@@ -58,6 +60,30 @@ If `web01` times out waiting for SSH on first boot (common with `ubuntu/jammy64`
 vagrant reload web01 --provision
 ```
 
+## Quickstart — Project 3 (Nagios)
+
+Halt Project 1 / 2 first.
+
+**Manual** (SSH + command files, including NRPE and Nagios):
+
+```bash
+cd project-3-monitoring-nagios/manual
+vagrant up db01
+```
+
+Follow `commands/` (`db01` → … → `web01` → `nagios`).
+
+**Automated** (six VMs + NRPE + Nagios):
+
+```bash
+cd project-3-monitoring-nagios/automation
+vagrant up
+```
+
+- App: **http://192.168.56.11**
+- Nagios: **http://192.168.56.10/nagios** (`nagiosadmin` / `admin123`)
+- CPU and RAM: **Current Status → Services** (the Hosts page is ping only)
+
 ## Folder layout
 
 ```
@@ -76,9 +102,15 @@ devops-vprofile-lab/
 │  ├─ README.md
 │  └─ scripts/
 └─ project-3-monitoring-nagios/
-   ├─ Vagrantfile
    ├─ README.md
-   └─ scripts/
+   ├─ manual/
+   │  ├─ Vagrantfile
+   │  ├─ README.md
+   │  └─ commands/
+   └─ automation/
+      ├─ Vagrantfile
+      ├─ README.md
+      └─ scripts/
 ```
 
 ## Why manual first?
