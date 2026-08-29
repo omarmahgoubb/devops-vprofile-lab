@@ -1,6 +1,6 @@
 # Update the system
 echo "Updating the system..."
-sudo dnf update -y
+# sudo dnf update -y
 echo "System update completed."
 
 # Install necessary packages

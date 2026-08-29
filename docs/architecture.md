@@ -1,13 +1,16 @@
-# Architecture & Ports (Project 1)
+# Architecture and ports
 
 **Hosts**
-- `db01` — MySQL/MariaDB (TCP 3306)
-- `mc01` — Memcached (TCP 11211, UDP 11111)
-- `rmq01` — RabbitMQ (TCP 5672)
-- `app01` — Tomcat (TCP 8080)
-- `web01` — Nginx (TCP 80 → upstream `app01:8080`)
+
+- `web01` `192.168.56.11` — Nginx (TCP 80 → upstream `app01:8080`)
+- `app01` `192.168.56.12` — Tomcat (TCP 8080)
+- `rmq01` `192.168.56.13` — RabbitMQ (TCP 5672)
+- `mc01` `192.168.56.14` — Memcached (TCP 11211, UDP 11111)
+- `db01` `192.168.56.15` — MariaDB (TCP 3306)
+- `mon01` `192.168.56.16` — Nagios (Project 3)
 
 **Flow**
-Client → `web01:80` (Nginx) → `app01:8080` (Tomcat) → caches (`mc01:11211`) and DB (`db01:3306`); async tasks via `rmq01:5672`.
 
-This matches the manual bring-up order you’ll see in `project-1-manual/commands/`.
+Client → `web01:80` (Nginx) → `app01:8080` (Tomcat) → cache (`mc01:11211`) and DB (`db01:3306`); async work via `rmq01:5672`.
+
+Bring-up order matches `project-1-manual/commands/` and `project-2-automation/scripts/`: DB → cache → broker → app → web.

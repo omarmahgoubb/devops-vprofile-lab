@@ -13,4 +13,4 @@
   - Nginx (`web01:80`)
 - Add NRPE to clients for deeper health checks (disk, load, process, app-specific).
 
-**IP mapping:** Ensure clients in `clients.cfg` match Project 2’s IPs. Default mapping there is `db01=.11, mc01=.12, rmq01=.13, app01=.14, web01=.15` on `192.168.56.0/24`.
+**IP mapping:** Clients in `clients.cfg` must match Project 2: `web01=.11`, `app01=.12`, `rmq01=.13`, `mc01=.14`, `db01=.15` on `192.168.56.0/24`. `mon01` is `.16`.

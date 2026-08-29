@@ -1,6 +1,6 @@
 #Update the system
 echo "Updating the system..."
-sudo apt update -y
+#sudo apt update -y
 echo "System update completed."
 
 # Install Nginx
@@ -29,8 +29,15 @@ sudo rm -rf /etc/nginx/sites-enabled/default
 sudo ln -s /etc/nginx/sites-available/vproapp /etc/nginx/sites-enabled/vproapp
 echo "Default site removed, and vproapp enabled."
 
+# app01 must resolve before nginx -t, or restart fails with "host not found in upstream"
+echo "Ensuring app01 is resolvable..."
+if ! getent hosts app01 >/dev/null 2>&1; then
+  echo "192.168.56.12 app01" | sudo tee -a /etc/hosts
+fi
+
 # Restart Nginx to apply changes
 echo "Restarting Nginx..."
+sudo nginx -t
 sudo systemctl restart nginx
 echo "Nginx restarted successfully."
 
