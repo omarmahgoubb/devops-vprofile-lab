@@ -46,13 +46,3 @@ Re-run one script after you edit it:
 ```bash
 vagrant provision app01
 ```
-
-## What the scripts learned from the manual lab
-
-- `dnf update` / `apt update` are commented out so provision is faster.
-- Tomcat uses `/usr/lib/jvm/jre-11-openjdk` (avoids Java 17 404).
-- Maven uses `mvn install -DskipTests` (JaCoCo failed on newer class files).
-- Nginx writes `192.168.56.12 app01` into `/etc/hosts` if hostmanager has not run yet.
-- `useradd tomcat` only if the user does not already exist.
-
-Secrets in the scripts are examples (`admin123`, RabbitMQ `test`/`test`). Change them before any shared use.

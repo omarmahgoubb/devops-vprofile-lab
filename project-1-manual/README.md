@@ -28,11 +28,3 @@ Bring VMs up one at a time in that table order. After `web01`, open **http://192
 ```bash
 vagrant reload web01
 ```
-
-## Fixes recorded in the command files
-
-- **db01:** create `accounts` before importing `db_backup.sql`.
-- **app01:** Tomcat `JAVA_HOME` / `JRE_HOME` must be `/usr/lib/jvm/jre-11-openjdk`. Java 17 makes the app fail to start (Tomcat 404 at `/`).
-- **web01:** if Nginx fails with `host not found in upstream "app01:8080"`, run `vagrant hostmanager` from this folder, then `sudo systemctl restart nginx`.
-
-Sample passwords are lab-only. Change them before using this anywhere else.

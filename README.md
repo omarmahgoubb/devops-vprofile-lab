@@ -9,11 +9,6 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — Nagios Core (`mon01`) pinging the five app VMs.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
-## Interactive walkthrough
-
-- **Code2Tutorial (auto-generated guide)** — click-through tutorial with chapters and command blocks:  
-  https://code2tutorial.com/tutorial/3cab15e6-750e-4e20-a74c-2ace648c7745/index.md
-
 ## Stack and bring-up order
 
 | Host | Role | IP | OS |
@@ -62,14 +57,6 @@ If `web01` times out waiting for SSH on first boot (common with `ubuntu/jammy64`
 ```bash
 vagrant reload web01 --provision
 ```
-
-## Lessons from the lab (applied here)
-
-- Create the `accounts` database **before** importing `db_backup.sql`.
-- Point Tomcat at **Java 11** (`/usr/lib/jvm/jre-11-openjdk`). `/usr/lib/jvm/jre` often follows Java 17 after Maven installs, and the app then returns a Tomcat 404.
-- Skip pinned `dnf remove java-17-...-<old-version>` — those RPM versions change.
-- Nginx must resolve `app01` before `systemctl restart nginx`, or you get `host not found in upstream`.
-- `web01` needs a longer `boot_timeout` (1000s). First SSH can fail; `vagrant reload web01` usually works.
 
 ## Folder layout
 
