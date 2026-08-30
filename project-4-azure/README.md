@@ -4,17 +4,17 @@ Same Java app as the on-prem Vagrant labs. The session was shown on AWS. This re
 
 On-prem we had five VMs, including Nginx. For these Azure tasks the instructor dropped Nginx. You open Tomcat on the app VM.
 
-**Task 1 is done** (we deleted resource group `vprofile` after it worked, to stop charges). Recreate with [task1-manual/deploy/vm.json](task1-manual/deploy/vm.json). App login: `admin_vp` / `admin_vp`. Log: [task1-manual/progress.md](task1-manual/progress.md).
+**Task 1 and Task 2 are done.** App login: `admin_vp` / `admin_vp`. Task 2 is live at [http://168.62.61.151:8080](http://168.62.61.151:8080). Delete RG `vprofile` when you want to stop charges. Recreate Task 2 with [task2-automated/deploy/vprofile.json](task2-automated/deploy/vprofile.json).
 
 ## Tasks
 
 | Task | What we do |
 |---|---|
 | **[task1-manual/](task1-manual/)** | **Done.** 4 VMs in `vprofile` (East US). Portal + [deploy/vm.json](task1-manual/deploy/vm.json). Commands in `task1-manual/commands/`. |
-| **task2-automated/** | Same 4 VMs, but the Lecture 2 bash scripts run as Azure **Custom data** (AWS called this User data). |
+| **[task2-automated/](task2-automated/)** | **Done.** Same 4 VMs in **one** file: [deploy/vprofile.json](task2-automated/deploy/vprofile.json). Custom data on first boot. Log: [progress.md](task2-automated/progress.md). |
 | **task3-azure-services/** | Replace self-hosted MariaDB / Memcached / RabbitMQ / public IP with Azure managed services. |
 
-Task 1 works. Task 2 and Task 3 are next.
+Task 1 and Task 2 work. Task 3 is next.
 
 ## Stack (Task 1 and Task 2)
 

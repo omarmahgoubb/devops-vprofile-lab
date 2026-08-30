@@ -1,0 +1,254 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "13691821084229982780"
+    }
+  },
+  "parameters": {
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for azureuser on all four VMs. Azure complexity rules apply."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Linux admin user"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Same region as Task 1"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "vnet-eastus-1",
+      "metadata": {
+        "description": "Existing-style names so Azure DNS still answers db01 / mc01 / rmq01 / app01"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "defaultValue": "snet-eastus-1"
+    },
+    "vnetPrefix": {
+      "type": "string",
+      "defaultValue": "172.16.0.0/24"
+    }
+  },
+  "variables": {
+    "db01Script": "#!/bin/bash\n# db01 — MariaDB (Azure Custom data, runs once as root)\nexec > /var/log/vprofile-customdata.log 2>&1\nset -eux\n\nsed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/01-localconfig.conf || true\nprintf 'PasswordAuthentication yes\\n' > /etc/ssh/sshd_config.d/99-password.conf\nsystemctl restart sshd || true\n\nif [ ! -f /swapfile ]; then\n  dd if=/dev/zero of=/swapfile bs=1M count=2048\n  chmod 600 /swapfile\n  mkswap /swapfile\n  swapon /swapfile\n  echo '/swapfile none swap sw 0 0' >> /etc/fstab\nfi\n\n# Skip dnf update on B1s (OOM). Swap is required before dnf install.\ndnf install epel-release -y\ndnf install git mariadb-server -y\nsystemctl enable mariadb --now\n\nmysql -e \"ALTER USER 'root'@'localhost' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;\"\nmysql -u root -padmin123 -e \"DELETE FROM mysql.user WHERE User='';\"\nmysql -u root -padmin123 -e \"DROP DATABASE IF EXISTS test;\"\nmysql -u root -padmin123 -e \"DELETE FROM mysql.db WHERE Db='test' OR Db='test\\\\_%';\"\nmysql -u root -padmin123 -e \"FLUSH PRIVILEGES;\"\n\nmysql -u root -padmin123 -e \"CREATE DATABASE IF NOT EXISTS accounts;\"\nmysql -u root -padmin123 -e \"GRANT ALL PRIVILEGES ON accounts.* TO 'admin'@'%' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;\"\n\ncd /root\nif [ ! -d vprofile-project ]; then\n  git clone -b main https://github.com/hkhcoder/vprofile-project.git\nfi\nmysql -u root -padmin123 accounts < /root/vprofile-project/src/main/resources/db_backup.sql\n\nsystemctl start firewalld\nsystemctl enable firewalld\nfirewall-cmd --zone=public --add-port=3306/tcp --permanent\nfirewall-cmd --reload\nsystemctl restart mariadb\n\necho \"db01 custom data done\"\n",
+    "mc01Script": "#!/bin/bash\n# mc01 — Memcached (Azure Custom data, runs once as root)\nexec > /var/log/vprofile-customdata.log 2>&1\nset -eux\n\nsed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/01-localconfig.conf || true\nprintf 'PasswordAuthentication yes\\n' > /etc/ssh/sshd_config.d/99-password.conf\nsystemctl restart sshd || true\n\nif [ ! -f /swapfile ]; then\n  dd if=/dev/zero of=/swapfile bs=1M count=2048\n  chmod 600 /swapfile\n  mkswap /swapfile\n  swapon /swapfile\n  echo '/swapfile none swap sw 0 0' >> /etc/fstab\nfi\n\ndnf install epel-release -y\ndnf install memcached -y\nsystemctl enable memcached\nsystemctl start memcached\nsed -i 's/127.0.0.1/0.0.0.0/g' /etc/sysconfig/memcached\nsystemctl restart memcached\n\nsystemctl start firewalld\nsystemctl enable firewalld\nfirewall-cmd --add-port=11211/tcp --permanent\nfirewall-cmd --add-port=11111/udp --permanent\nfirewall-cmd --reload\nmemcached -p 11211 -U 11111 -u memcached -d || true\n\necho \"mc01 custom data done\"\n",
+    "rmq01Script": "#!/bin/bash\n# rmq01 — RabbitMQ (Azure Custom data, runs once as root)\nexec > /var/log/vprofile-customdata.log 2>&1\nset -eux\n\nsed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/01-localconfig.conf || true\nprintf 'PasswordAuthentication yes\\n' > /etc/ssh/sshd_config.d/99-password.conf\nsystemctl restart sshd || true\n\nif [ ! -f /swapfile ]; then\n  dd if=/dev/zero of=/swapfile bs=1M count=2048\n  chmod 600 /swapfile\n  mkswap /swapfile\n  swapon /swapfile\n  echo '/swapfile none swap sw 0 0' >> /etc/fstab\nfi\n\ndnf install epel-release -y\ndnf install wget -y\ndnf -y install centos-release-rabbitmq-38\ndnf --enablerepo=centos-rabbitmq-38 -y install rabbitmq-server\nsystemctl enable --now rabbitmq-server\n\necho \"[{rabbit, [{loopback_users, []}]}].\" > /etc/rabbitmq/rabbitmq.config\nrabbitmqctl add_user test test || true\nrabbitmqctl set_user_tags test administrator\nsystemctl restart rabbitmq-server\n\nsystemctl start firewalld\nsystemctl enable firewalld\nfirewall-cmd --add-port=5672/tcp --permanent\nfirewall-cmd --reload\nsystemctl enable --now rabbitmq-server\n\necho \"rmq01 custom data done\"\n",
+    "app01Script": "#!/bin/bash\n# app01 — Tomcat + vprofile WAR (Azure Custom data, runs once as root)\nexec > /var/log/vprofile-customdata.log 2>&1\nset -eux\n\nsed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/01-localconfig.conf || true\nprintf 'PasswordAuthentication yes\\n' > /etc/ssh/sshd_config.d/99-password.conf\nsystemctl restart sshd || true\n\nif [ ! -f /swapfile ]; then\n  dd if=/dev/zero of=/swapfile bs=1M count=2048\n  chmod 600 /swapfile\n  mkswap /swapfile\n  swapon /swapfile\n  echo '/swapfile none swap sw 0 0' >> /etc/fstab\nfi\n\n# B2s can take a full update; skip it so first boot finishes sooner (same as Lecture 2).\ndnf install epel-release -y\ndnf install java-11-openjdk java-11-openjdk-devel git maven wget -y\n\ncd /tmp\nwget -q https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.75/bin/apache-tomcat-9.0.75.tar.gz\ntar xzvf apache-tomcat-9.0.75.tar.gz\ncd apache-tomcat-9.0.75\nid tomcat &>/dev/null || useradd tomcat -md /usr/local/tomcat -s /sbin/nologin\ncp -r * /usr/local/tomcat/\nchown -R tomcat:tomcat /usr/local/tomcat\n\ncat > /etc/systemd/system/tomcat.service <<'EOF'\n[Unit]\nDescription=Tomcat\nAfter=network.target\n[Service]\nUser=tomcat\nWorkingDirectory=/usr/local/tomcat\nEnvironment=JRE_HOME=/usr/lib/jvm/jre-11-openjdk\nEnvironment=JAVA_HOME=/usr/lib/jvm/jre-11-openjdk\nEnvironment=CATALINA_HOME=/usr/local/tomcat\nEnvironment=CATALINE_BASE=/usr/local/tomcat\nExecStart=/usr/local/tomcat/bin/catalina.sh run\nExecStop=/usr/local/tomcat/bin/shutdown.sh\nSyslogIdentifier=tomcat-%i\n[Install]\nWantedBy=multi-user.target\nEOF\n\nsystemctl daemon-reload\nsystemctl enable --now tomcat\n\nsystemctl start firewalld\nsystemctl enable firewalld\nfirewall-cmd --zone=public --add-port=8080/tcp --permanent\nfirewall-cmd --reload\n\ncd /tmp\nif [ ! -d vprofile-project ]; then\n  git clone -b main https://github.com/hkhcoder/vprofile-project.git\nfi\ncd /tmp/vprofile-project\n# skipTests: JaCoCo fails on newer class-file versions (Lecture 2)\nmvn install -DskipTests\n\nsystemctl stop tomcat\nrm -rf /usr/local/tomcat/webapps/ROOT\ncp /tmp/vprofile-project/target/vprofile-v2.war /usr/local/tomcat/webapps/ROOT.war\nchown -R tomcat:tomcat /usr/local/tomcat/webapps\nsystemctl start tomcat\n\necho \"app01 custom data done\"\n",
+    "vms": [
+      {
+        "name": "db01",
+        "size": "Standard_B1s",
+        "allowHttp8080": false,
+        "script": "[variables('db01Script')]"
+      },
+      {
+        "name": "mc01",
+        "size": "Standard_B1s",
+        "allowHttp8080": false,
+        "script": "[variables('mc01Script')]"
+      },
+      {
+        "name": "rmq01",
+        "size": "Standard_B1s",
+        "allowHttp8080": false,
+        "script": "[variables('rmq01Script')]"
+      },
+      {
+        "name": "app01",
+        "size": "Standard_B2s",
+        "allowHttp8080": true,
+        "script": "[variables('app01Script')]"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('vnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "copy": {
+        "name": "nsg",
+        "count": "[length(variables('vms'))]"
+      },
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}-nsg', variables('vms')[copyIndex()].name)]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": "[concat(createArray(createObject('name', 'SSH', 'properties', createObject('priority', 1000, 'protocol', 'Tcp', 'access', 'Allow', 'direction', 'Inbound', 'sourceAddressPrefix', '*', 'sourcePortRange', '*', 'destinationAddressPrefix', '*', 'destinationPortRange', '22'))), if(variables('vms')[copyIndex()].allowHttp8080, createArray(createObject('name', 'allow-8080', 'properties', createObject('priority', 1010, 'protocol', 'Tcp', 'access', 'Allow', 'direction', 'Inbound', 'sourceAddressPrefix', '*', 'sourcePortRange', '*', 'destinationAddressPrefix', '*', 'destinationPortRange', '8080'))), createArray()))]"
+      }
+    },
+    {
+      "copy": {
+        "name": "pip",
+        "count": "[length(variables('vms'))]"
+      },
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}-ip', variables('vms')[copyIndex()].name)]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "copy": {
+        "name": "nic",
+        "count": "[length(variables('vms'))]"
+      },
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}-nic', variables('vms')[copyIndex()].name)]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[copyIndex()].name))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('{0}-nsg', variables('vms')[copyIndex()].name))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', format('{0}-nsg', variables('vms')[copyIndex()].name))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[copyIndex()].name))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "vmRes",
+        "count": "[length(variables('vms'))]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-03-01",
+      "name": "[variables('vms')[copyIndex()].name]",
+      "location": "[parameters('location')]",
+      "plan": {
+        "name": "centos-stream-9-gen2",
+        "product": "centos-stream-9-gen2",
+        "publisher": "procomputers"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vms')[copyIndex()].size]"
+        },
+        "osProfile": {
+          "computerName": "[variables('vms')[copyIndex()].name]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[base64(variables('vms')[copyIndex()].script)]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": false
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "procomputers",
+            "offer": "centos-stream-9-gen2",
+            "sku": "centos-stream-9-gen2",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[format('{0}-osdisk', variables('vms')[copyIndex()].name)]",
+            "createOption": "FromImage",
+            "diskSizeGB": 30,
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "deleteOption": "Delete"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[copyIndex()].name))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": false
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[copyIndex()].name))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "publicIps": {
+      "type": "object",
+      "value": {
+        "db01": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[0].name)), '2023-11-01').ipAddress]",
+        "mc01": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[1].name)), '2023-11-01').ipAddress]",
+        "rmq01": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[2].name)), '2023-11-01').ipAddress]",
+        "app01": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[3].name)), '2023-11-01').ipAddress]"
+      }
+    },
+    "privateIps": {
+      "type": "object",
+      "value": {
+        "db01": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[0].name)), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]",
+        "mc01": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[1].name)), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]",
+        "rmq01": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[2].name)), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]",
+        "app01": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', variables('vms')[3].name)), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+      }
+    },
+    "appUrl": {
+      "type": "string",
+      "value": "[format('http://{0}:8080', reference(resourceId('Microsoft.Network/publicIPAddresses', format('{0}-ip', variables('vms')[3].name)), '2023-11-01').ipAddress)]"
+    }
+  }
+}

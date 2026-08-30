@@ -7,7 +7,7 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-1-manual/](project-1-manual/)** — SSH into each VM and run the commands by hand (five app VMs).
 - **[project-2-automation/](project-2-automation/)** — the same stack, provisioned by Vagrant shell scripts.
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
-- **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual + ARM template. Task 2/3 next.
+- **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy. Task 3 next.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -87,7 +87,12 @@ vagrant up
 
 ## Quickstart — Project 4 (Azure)
 
-Four VMs in one VNet, no Nginx. Browse Tomcat on `app01:8080`. See [project-4-azure/](project-4-azure/). Recreate VMs with [project-4-azure/task1-manual/deploy/vm.json](project-4-azure/task1-manual/deploy/vm.json). Delete the resource group when the lab is done so you stop paying.
+Four VMs in one VNet, no Nginx. Browse Tomcat on `app01:8080`. See [project-4-azure/](project-4-azure/).
+
+- Task 1 (manual): [project-4-azure/task1-manual/deploy/vm.json](project-4-azure/task1-manual/deploy/vm.json)
+- Task 2 (Custom data, one file): [project-4-azure/task2-automated/deploy/vprofile.json](project-4-azure/task2-automated/deploy/vprofile.json)
+
+Delete the resource group when the lab is done so you stop paying.
 
 ## Folder layout
 
@@ -113,10 +118,14 @@ devops-vprofile-lab/
 └─ project-4-azure/
    ├─ README.md
    ├─ docs/
-   └─ task1-manual/
-      ├─ commands/
-      ├─ deploy/          # vm.json — recreate VMs
-      └─ progress.md      # what we actually did
+   ├─ task1-manual/
+   │  ├─ commands/
+   │  ├─ deploy/          # vm.json — one VM
+   │  └─ progress.md
+   └─ task2-automated/
+      ├─ deploy/          # vprofile.json — all 4 VMs + Custom data
+      ├─ scripts/
+      └─ progress.md
 ```
 
 ## Why manual first?

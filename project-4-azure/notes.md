@@ -25,4 +25,17 @@ App worked at http://20.85.229.239:8080 (`admin_vp` / `admin_vp`). Then we **del
 
 Gotchas: image blocks password SSH; B1s needs swap or `dnf` is Killed; do not create a second VNet; `app01` is B2s; NSG 8080 on app only.
 
-Reusable template: `task1-manual/deploy/vm.json`. Full log: `task1-manual/progress.md`.
+Reusable one-VM template: `task1-manual/deploy/vm.json`. Full log: `task1-manual/progress.md`.
+
+## Task 2 — done (RG still up)
+
+One file: `task2-automated/deploy/vprofile.json`. Custom data installed all four roles. App worked at http://168.62.61.151:8080 (`admin_vp` / `admin_vp`).
+
+| VM | Public IP | Private IP | SSH |
+|---|---|---|---|
+| db01 | 20.85.215.10 | 172.16.0.5 | `ssh azureuser@20.85.215.10` |
+| mc01 | 20.102.55.91 | 172.16.0.7 | `ssh azureuser@20.102.55.91` |
+| rmq01 | 20.115.2.194 | 172.16.0.4 | `ssh azureuser@20.115.2.194` |
+| app01 | 168.62.61.151 | 172.16.0.6 | `ssh azureuser@168.62.61.151` |
+
+Private IPs differ from Task 1 (DHCP). Hostnames still resolve. Check `/var/log/vprofile-customdata.log`. Full log: `task2-automated/progress.md`. Delete RG `vprofile` when you want to stop cost.
