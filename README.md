@@ -1,12 +1,13 @@
-# DevOps VProfile Lab — Manual → Automation → Monitoring
+# DevOps VProfile Lab — Manual → Automation → Monitoring → Azure
 
-This monorepo documents my journey from **manual provisioning** to **automated builds** and **monitoring** for a multi-tier Java web application.
+This monorepo documents my journey from **manual provisioning** to **automated builds**, **monitoring**, and **Azure** for a multi-tier Java web application.
 
 ## What’s inside
 
 - **[project-1-manual/](project-1-manual/)** — SSH into each VM and run the commands by hand (five app VMs).
 - **[project-2-automation/](project-2-automation/)** — the same stack, provisioned by Vagrant shell scripts.
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
+- **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual + ARM template. Task 2/3 next.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -84,6 +85,10 @@ vagrant up
 - Nagios: **http://192.168.56.10/nagios** (`nagiosadmin` / `admin123`)
 - CPU and RAM: **Current Status → Services** (the Hosts page is ping only)
 
+## Quickstart — Project 4 (Azure)
+
+Four VMs in one VNet, no Nginx. Browse Tomcat on `app01:8080`. See [project-4-azure/](project-4-azure/). Recreate VMs with [project-4-azure/task1-manual/deploy/vm.json](project-4-azure/task1-manual/deploy/vm.json). Delete the resource group when the lab is done so you stop paying.
+
 ## Folder layout
 
 ```
@@ -101,16 +106,17 @@ devops-vprofile-lab/
 │  ├─ Vagrantfile
 │  ├─ README.md
 │  └─ scripts/
-└─ project-3-monitoring-nagios/
+├─ project-3-monitoring-nagios/
+│  ├─ README.md
+│  ├─ manual/
+│  └─ automation/
+└─ project-4-azure/
    ├─ README.md
-   ├─ manual/
-   │  ├─ Vagrantfile
-   │  ├─ README.md
-   │  └─ commands/
-   └─ automation/
-      ├─ Vagrantfile
-      ├─ README.md
-      └─ scripts/
+   ├─ docs/
+   └─ task1-manual/
+      ├─ commands/
+      ├─ deploy/          # vm.json — recreate VMs
+      └─ progress.md      # what we actually did
 ```
 
 ## Why manual first?

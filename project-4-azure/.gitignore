@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+
+*.log
+
+.idea/
+.vscode/
+*.iml
+
+.env
+*.secret
+*.pem
+*.ppk
+id_rsa
+id_rsa.pub
