@@ -8,8 +8,11 @@ echo "Installing NRPE and plugins..."
 sudo dnf install -y nrpe nagios-plugins-all --skip-broken
 sudo dnf install -y nagios-plugins-load nagios-plugins-swap nagios-plugins-disk nagios-plugins-procs
 
-if ! grep -q '192.168.56.10' /etc/nagios/nrpe.cfg 2>/dev/null; then
-  echo "allowed_hosts=127.0.0.1,192.168.56.10" | sudo tee -a /etc/nagios/nrpe.cfg
+echo "Allowing Nagios server (192.168.56.10) in nrpe.cfg..."
+if grep -qE '^#?allowed_hosts=' /etc/nagios/nrpe.cfg 2>/dev/null; then
+  sudo sed -i -E 's/^#?allowed_hosts=.*/allowed_hosts=127.0.0.1,::1,192.168.56.10/' /etc/nagios/nrpe.cfg
+else
+  echo "allowed_hosts=127.0.0.1,::1,192.168.56.10" | sudo tee -a /etc/nagios/nrpe.cfg
 fi
 
 echo "Installing check_ram plugin..."
@@ -30,12 +33,15 @@ exit 0
 EOF
 sudo chmod +x /usr/lib64/nagios/plugins/check_ram
 
-if ! grep -q 'command\[check_load\]' /etc/nagios/nrpe.cfg; then
-  sudo tee -a /etc/nagios/nrpe.cfg >/dev/null <<'EOF'
+# NRPE 4 only loads command[] from include_dir (/etc/nrpe.d/).
+# Do not grep nrpe.cfg for command[check_load] — the stock file has that
+# string in a comment, which skipped writing check_ram on first automate.
+# zzz_ prefix so this file loads last and overrides plugin package defaults.
+sudo mkdir -p /etc/nrpe.d
+sudo tee /etc/nrpe.d/zzz_vprofile.cfg >/dev/null <<'EOF'
 command[check_load]=/usr/lib64/nagios/plugins/check_load -w 1.0,1.0,1.0 -c 2.0,2.0,2.0
 command[check_ram]=/usr/lib64/nagios/plugins/check_ram 20 10
 EOF
-fi
 
 sudo systemctl enable nrpe
 sudo systemctl restart nrpe

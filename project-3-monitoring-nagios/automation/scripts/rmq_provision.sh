@@ -31,7 +31,7 @@ echo "RabbitMQ configuration updated."
 
 # Add a RabbitMQ user and assign administrator role
 echo "Adding RabbitMQ user 'test' and assigning administrator role..."
-sudo rabbitmqctl add_user test test
+sudo rabbitmqctl add_user test test || sudo rabbitmqctl change_password test test
 sudo rabbitmqctl set_user_tags test administrator
 echo "RabbitMQ user 'test' added and configured."
 

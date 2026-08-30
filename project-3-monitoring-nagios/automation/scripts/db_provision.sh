@@ -37,13 +37,15 @@ echo "MariaDB installation secured."
 
 # Create the accounts database and set up privileges
 echo "Creating the 'accounts' database and setting up privileges..."
-sudo mysql -u root -padmin123 -e "CREATE DATABASE accounts;"
+sudo mysql -u root -padmin123 -e "CREATE DATABASE IF NOT EXISTS accounts;"
 sudo mysql -u root -padmin123 -e "GRANT ALL PRIVILEGES ON accounts.* TO 'admin'@'%' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;"
 echo "'accounts' database and user privileges configured."
 
 # Clone the project repository
 echo "Cloning the project repository..."
-git clone -b main https://github.com/hkhcoder/vprofile-project.git
+if [ ! -d vprofile-project ]; then
+  git clone -b main https://github.com/hkhcoder/vprofile-project.git
+fi
 echo "Project repository cloned."
 
 # Import the database backup

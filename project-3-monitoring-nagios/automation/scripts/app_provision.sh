@@ -12,7 +12,9 @@ echo "Required packages installed."
 # Download and set up Apache Tomcat
 echo "Downloading and setting up Apache Tomcat..."
 cd /tmp/
-wget https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.75/bin/apache-tomcat-9.0.75.tar.gz
+if [ ! -f apache-tomcat-9.0.75.tar.gz ]; then
+  wget https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.75/bin/apache-tomcat-9.0.75.tar.gz
+fi
 tar xzvf apache-tomcat-9.0.75.tar.gz
 cd apache-tomcat-9.0.75
 id tomcat &>/dev/null || sudo useradd tomcat -md /usr/local/tomcat -s /sbin/nologin
@@ -55,8 +57,10 @@ echo "Firewall configured for Tomcat."
 
 # Clone the project repository
 echo "Cloning the project repository..."
-cd /tmp
-git clone -b main https://github.com/hkhcoder/vprofile-project.git
+if [ ! -d /tmp/vprofile-project ]; then
+  cd /tmp
+  git clone -b main https://github.com/hkhcoder/vprofile-project.git
+fi
 echo "Project repository cloned."
 
 # Build the project with Maven (skip tests: JaCoCo fails on newer class-file versions)
