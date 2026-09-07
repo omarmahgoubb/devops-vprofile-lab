@@ -6,16 +6,16 @@ Workstation: VirtualBox **ubuntu** (not Vagrant). SSH on Host-Only; Docker Hub n
 
 ## Tasks
 
-| Step | What |
-|---|---|
-| **0** | [docs/network-and-docker.md](docs/network-and-docker.md) — SSH + Docker + internet |
-| **1** | [docs/choose-images.md](docs/choose-images.md) — pick / pull base images |
-| **2** | [app/](app/) — Tomcat Dockerfile + build |
-| **3** | Run the app container; **elinks** (no Chrome in the VM) |
-| **4** | Push to Docker Hub |
-| **5** | [compose/](compose/) — five services together |
-| **5b** | [docs/compose-login.md](docs/compose-login.md) — `GRANT` + MySQL `skip-ssl` so login works |
-| **Later** | kubeadm: 3 VMs (1 master, 2 workers), all Ubuntu |
+| Step | What | Commands we typed |
+|---|---|---|
+| **0** | [docs/network-and-docker.md](docs/network-and-docker.md) — SSH + Docker + internet | [commands/00_network.md](commands/00_network.md) |
+| **1** | [docs/choose-images.md](docs/choose-images.md) — pick / pull base images | pull is in `00` / `03` |
+| **2–3** | [app/](app/) — Tomcat Dockerfile, `docker run`, elinks | [commands/01_app.md](commands/01_app.md) |
+| **4** | Push app to Docker Hub | [commands/02_push_app.md](commands/02_push_app.md) |
+| **5** | [compose/](compose/) — five services | [commands/03_db_web.md](commands/03_db_web.md), [04_compose.md](commands/04_compose.md) |
+| **5b** | [docs/compose-login.md](docs/compose-login.md) — GRANT + `skip-ssl` | [commands/05_login.md](commands/05_login.md) |
+| **5c** | Push db + web images | [commands/06_push_db_web.md](commands/06_push_db_web.md) |
+| **Later** | kubeadm: 3 VMs (1 master, 2 workers), all Ubuntu | |
 
 Class Dockerfiles (from the session): [docs/class-dockerfiles.md](docs/class-dockerfiles.md).
 

@@ -165,6 +165,7 @@ devops-vprofile-lab/
 │  └─ task3-playbooks/    # db.yml … web.yml
 └─ project-6-containers/
    ├─ README.md
+   ├─ commands/           # what we typed on the ubuntu VM
    ├─ app/                # Tomcat Dockerfile
    ├─ compose/            # docker-compose.yml (db01 --skip-ssl)
    └─ docs/               # images, login GRANT + SSL
