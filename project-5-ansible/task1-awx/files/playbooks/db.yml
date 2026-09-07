@@ -1,0 +1,82 @@
+---
+- name: db01 — MariaDB (from db_provision.sh)
+  hosts: db01
+  become: true
+  tasks:
+    - name: Install EPEL, git, MariaDB
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - git
+          - mariadb-server
+        state: present
+
+    - name: Start and enable MariaDB
+      ansible.builtin.systemd:
+        name: mariadb
+        state: started
+        enabled: true
+
+    - name: Check if root works without a password (fresh install)
+      ansible.builtin.command: mysql -e "SELECT 1"
+      register: mysql_nopass
+      changed_when: false
+      failed_when: false
+
+    - name: Set root password (only on a fresh install)
+      ansible.builtin.command: >-
+        mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;"
+      when: mysql_nopass.rc == 0
+
+    - name: Confirm root can log in with admin123
+      ansible.builtin.command: mysql -u root -padmin123 -e "SELECT 1"
+      changed_when: false
+
+    - name: Remove anonymous users and test DB
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      loop:
+        - mysql -u root -padmin123 -e "DELETE FROM mysql.user WHERE User='';"
+        - mysql -u root -padmin123 -e "DROP DATABASE IF EXISTS test;"
+        - mysql -u root -padmin123 -e "FLUSH PRIVILEGES;"
+      changed_when: true
+
+    - name: Create accounts DB and admin user
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      loop:
+        - mysql -u root -padmin123 -e "CREATE DATABASE IF NOT EXISTS accounts;"
+        - mysql -u root -padmin123 -e "GRANT ALL PRIVILEGES ON accounts.* TO 'admin'@'%' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;"
+      changed_when: true
+
+    - name: Clone vprofile repo (SQL dump)
+      ansible.builtin.git:
+        repo: https://github.com/hkhcoder/vprofile-project.git
+        dest: /opt/vprofile-project
+        version: main
+        force: true
+
+    - name: Import db_backup.sql
+      ansible.builtin.shell: mysql -u root -padmin123 accounts < /opt/vprofile-project/src/main/resources/db_backup.sql
+      changed_when: true
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Open MariaDB 3306
+      ansible.builtin.command: firewall-cmd --zone=public --add-port=3306/tcp --permanent
+      register: fw
+      changed_when: fw.rc == 0
+      failed_when: fw.rc != 0 and 'ALREADY_ENABLED' not in fw.stderr
+
+    - name: Reload firewalld
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: true
+
+    - name: Restart MariaDB
+      ansible.builtin.systemd:
+        name: mariadb
+        state: restarted

@@ -1,0 +1,74 @@
+---
+- name: rmq01 — RabbitMQ (from rmq_provision.sh)
+  hosts: rmq01
+  become: true
+  tasks:
+    - name: Install EPEL and wget
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - wget
+        state: present
+
+    - name: Install centos-release-rabbitmq-38
+      ansible.builtin.dnf:
+        name: centos-release-rabbitmq-38
+        state: present
+
+    - name: Install rabbitmq-server from that repo
+      ansible.builtin.dnf:
+        name: rabbitmq-server
+        enablerepo: centos-rabbitmq-38
+        state: present
+
+    - name: Start and enable RabbitMQ
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: started
+        enabled: true
+
+    - name: Allow non-localhost users
+      ansible.builtin.copy:
+        src: rabbitmq.config
+        dest: /etc/rabbitmq/rabbitmq.config
+        mode: "0644"
+      notify: Restart rabbitmq
+
+    - name: Flush handlers so config is live before user create
+      ansible.builtin.meta: flush_handlers
+
+    - name: Add user test / test
+      ansible.builtin.command: rabbitmqctl add_user test test
+      register: add_user
+      changed_when: add_user.rc == 0
+      failed_when: add_user.rc != 0 and 'already exists' not in (add_user.stderr | default(''))
+
+    - name: Tag user test as administrator
+      ansible.builtin.command: rabbitmqctl set_user_tags test administrator
+      changed_when: true
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Open AMQP 5672
+      ansible.builtin.command: firewall-cmd --add-port=5672/tcp --permanent
+      changed_when: true
+
+    - name: Reload firewalld
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: true
+
+    - name: Ensure RabbitMQ is running
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart rabbitmq
+      ansible.builtin.systemd:
+        name: rabbitmq-server
+        state: restarted

@@ -1,0 +1,28 @@
+# Task 1 — AWX controller only.
+# Halt other labs if your PC is short on RAM (this box wants 8 GB).
+# IP 192.168.56.20 does not clash with db01–web01 (.11–.15) or nagios (.10).
+#
+#   vagrant plugin install vagrant-hostmanager
+#   vagrant up awx01
+#   vagrant ssh awx01
+#
+# Then follow commands/awx01_commands.md
+# Use Administrator PowerShell so hostmanager can update the Windows hosts file.
+
+Vagrant.configure("2") do |config|
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_host = true
+
+  config.vm.define "awx01" do |awx01|
+    awx01.vm.box = "ubuntu/jammy64"
+    awx01.vm.hostname = "awx01"
+    awx01.vm.network "private_network", ip: "192.168.56.20"
+    awx01.vm.network "forwarded_port", guest: 8080, host: 8088, host_ip: "127.0.0.1"
+    awx01.vm.boot_timeout = 1000
+    awx01.vm.provider "virtualbox" do |vb|
+      vb.name = "awx01"
+      vb.memory = "8192"
+      vb.cpus = 2
+    end
+  end
+end

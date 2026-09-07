@@ -1,0 +1,120 @@
+---
+- name: app01 — Tomcat + WAR (from app_provision.sh)
+  hosts: app01
+  become: true
+  tasks:
+    - name: Install Java 11, git, Maven, wget
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - java-11-openjdk
+          - java-11-openjdk-devel
+          - git
+          - maven
+          - wget
+        state: present
+
+    - name: Download Tomcat 9.0.75
+      ansible.builtin.get_url:
+        url: https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.75/bin/apache-tomcat-9.0.75.tar.gz
+        dest: /tmp/apache-tomcat-9.0.75.tar.gz
+        mode: "0644"
+
+    - name: Unpack Tomcat
+      ansible.builtin.unarchive:
+        src: /tmp/apache-tomcat-9.0.75.tar.gz
+        dest: /tmp
+        remote_src: true
+        creates: /tmp/apache-tomcat-9.0.75/bin/catalina.sh
+
+    - name: Create tomcat user
+      ansible.builtin.user:
+        name: tomcat
+        home: /usr/local/tomcat
+        shell: /sbin/nologin
+        system: true
+        create_home: true
+
+    - name: Copy Tomcat into /usr/local/tomcat
+      ansible.builtin.command: cp -a /tmp/apache-tomcat-9.0.75/. /usr/local/tomcat/
+      args:
+        creates: /usr/local/tomcat/bin/catalina.sh
+
+    - name: Tomcat directory owner
+      ansible.builtin.file:
+        path: /usr/local/tomcat
+        owner: tomcat
+        group: tomcat
+        recurse: true
+
+    - name: Install tomcat.service (Java 11 paths)
+      ansible.builtin.template:
+        src: tomcat.service.j2
+        dest: /etc/systemd/system/tomcat.service
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Flush systemd reload
+      ansible.builtin.meta: flush_handlers
+
+    - name: Start and enable Tomcat
+      ansible.builtin.systemd:
+        name: tomcat
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Open Tomcat 8080
+      ansible.builtin.command: firewall-cmd --zone=public --add-port=8080/tcp --permanent
+      changed_when: true
+
+    - name: Reload firewalld
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: true
+
+    - name: Clone vprofile
+      ansible.builtin.git:
+        repo: https://github.com/hkhcoder/vprofile-project.git
+        dest: /tmp/vprofile-project
+        version: main
+        force: true
+
+    - name: Maven install (skip tests, same as Lecture 2)
+      ansible.builtin.command: mvn install -DskipTests
+      args:
+        chdir: /tmp/vprofile-project
+        creates: /tmp/vprofile-project/target/vprofile-v2.war
+
+    - name: Stop Tomcat before deploy
+      ansible.builtin.systemd:
+        name: tomcat
+        state: stopped
+
+    - name: Remove default ROOT
+      ansible.builtin.file:
+        path: /usr/local/tomcat/webapps/ROOT
+        state: absent
+
+    - name: Deploy WAR as ROOT
+      ansible.builtin.copy:
+        src: /tmp/vprofile-project/target/vprofile-v2.war
+        dest: /usr/local/tomcat/webapps/ROOT.war
+        remote_src: true
+        owner: tomcat
+        group: tomcat
+
+    - name: Start Tomcat
+      ansible.builtin.systemd:
+        name: tomcat
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true

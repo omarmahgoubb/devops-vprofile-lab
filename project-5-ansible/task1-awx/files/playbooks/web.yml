@@ -1,0 +1,43 @@
+---
+- name: web01 — Nginx (from web_provision.sh)
+  hosts: web01
+  become: true
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Site config vproapp
+      ansible.builtin.template:
+        src: vproapp.j2
+        dest: /etc/nginx/sites-available/vproapp
+        mode: "0644"
+
+    - name: Disable default site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Enable vproapp
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/vproapp
+        dest: /etc/nginx/sites-enabled/vproapp
+        state: link
+
+    - name: Make sure app01 resolves (hostmanager may already do this)
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: 192.168.56.12 app01
+        regexp: 'app01$'
+
+    - name: Check nginx config
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Restart and enable Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+        enabled: true

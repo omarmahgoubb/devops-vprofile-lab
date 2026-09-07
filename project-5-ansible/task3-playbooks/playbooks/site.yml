@@ -1,0 +1,7 @@
+---
+# Same order as Lecture 2: db → mc → rmq → app → web
+- import_playbook: db.yml
+- import_playbook: mc.yml
+- import_playbook: rmq.yml
+- import_playbook: app.yml
+- import_playbook: web.yml

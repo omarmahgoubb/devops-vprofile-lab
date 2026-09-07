@@ -1,0 +1,52 @@
+---
+- name: mc01 — Memcached (from mc_provision.sh)
+  hosts: mc01
+  become: true
+  tasks:
+    - name: Install EPEL and Memcached
+      ansible.builtin.dnf:
+        name:
+          - epel-release
+          - memcached
+        state: present
+
+    - name: Start and enable Memcached
+      ansible.builtin.systemd:
+        name: memcached
+        state: started
+        enabled: true
+
+    - name: Listen on all interfaces
+      ansible.builtin.replace:
+        path: /etc/sysconfig/memcached
+        regexp: '127\.0\.0\.1'
+        replace: '0.0.0.0'
+      notify: Restart memcached
+
+    - name: Start and enable firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Open Memcached ports
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - firewall-cmd --add-port=11211/tcp --permanent
+        - firewall-cmd --add-port=11111/udp --permanent
+      changed_when: true
+
+    - name: Reload firewalld
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: true
+
+    - name: Extra memcached daemon (Lecture 2 command)
+      ansible.builtin.command: memcached -p 11211 -U 11111 -u memcached -d
+      changed_when: true
+      failed_when: false
+
+  handlers:
+    - name: Restart memcached
+      ansible.builtin.systemd:
+        name: memcached
+        state: restarted

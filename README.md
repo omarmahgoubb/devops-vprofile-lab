@@ -1,4 +1,4 @@
-# DevOps VProfile Lab — Manual → Automation → Monitoring → Azure
+# DevOps VProfile Lab — Manual → Automation → Monitoring → Azure → Ansible
 
 This monorepo documents my journey from **manual provisioning** to **automated builds**, **monitoring**, and **Azure** for a multi-tier Java web application.
 
@@ -7,7 +7,8 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-1-manual/](project-1-manual/)** — SSH into each VM and run the commands by hand (five app VMs).
 - **[project-2-automation/](project-2-automation/)** — the same stack, provisioned by Vagrant shell scripts.
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
-- **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy. Task 3 next.
+- **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy.
+- **[project-5-ansible/](project-5-ansible/)** — AWX + Ansible Core on `awx01`, then playbooks for the five on-prem VMs.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -94,6 +95,25 @@ Four VMs in one VNet, no Nginx. Browse Tomcat on `app01:8080`. See [project-4-az
 
 Delete the resource group when the lab is done so you stop paying.
 
+## Quickstart — Project 5 (Ansible / AWX)
+
+Controller is a separate Vagrant Ubuntu box (`awx01`, 8 GB, `192.168.56.20`). The five app VMs are the Lecture 2 / Project 1 stack.
+
+```powershell
+cd project-5-ansible/task1-awx
+vagrant up awx01
+vagrant ssh awx01
+```
+
+Then [task1-awx/commands/awx01_commands.md](project-5-ansible/task1-awx/commands/awx01_commands.md), ping with [task2-ansible-core/](project-5-ansible/task2-ansible-core/), playbooks from `awx01`:
+
+```bash
+cd /vagrant/files/playbooks
+ansible-playbook -i ~/ansible/hosts.ini db.yml
+```
+
+App: **http://192.168.56.11**. AWX UI (port-forward): **http://127.0.0.1:8088** (`admin`).
+
 ## Folder layout
 
 ```
@@ -126,6 +146,11 @@ devops-vprofile-lab/
       ├─ deploy/          # vprofile.json — all 4 VMs + Custom data
       ├─ scripts/
       └─ progress.md
+└─ project-5-ansible/
+   ├─ README.md
+   ├─ task1-awx/          # Vagrant awx01 + AWX install
+   ├─ task2-ansible-core/ # inventory + ping
+   └─ task3-playbooks/    # db.yml … web.yml
 ```
 
 ## Why manual first?
