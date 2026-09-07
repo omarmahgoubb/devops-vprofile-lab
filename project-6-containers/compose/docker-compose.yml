@@ -1,0 +1,48 @@
+services:
+  db01:
+    image: omarrmahgoub/vprofile-db:v1
+    container_name: db01
+    command: --skip-ssl
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+
+  mc01:
+    image: memcached
+    container_name: mc01
+    ports:
+      - "11211:11211"
+
+  rmq01:
+    image: rabbitmq
+    container_name: rmq01
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+
+  app01:
+    image: omarrmahgoub/vprofile-app:v1
+    container_name: app01
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db01
+      - mc01
+      - rmq01
+
+  web01:
+    image: omarrmahgoub/vprofile-web:v1
+    container_name: web01
+    ports:
+      - "80:80"
+    depends_on:
+      - app01
+
+volumes:
+  dbdata:

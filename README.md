@@ -1,6 +1,6 @@
-# DevOps VProfile Lab — Manual → Automation → Monitoring → Azure → Ansible
+# DevOps VProfile Lab — Manual → Automation → Monitoring → Azure → Ansible → Containers
 
-This monorepo documents my journey from **manual provisioning** to **automated builds**, **monitoring**, and **Azure** for a multi-tier Java web application.
+This monorepo documents my journey from **manual provisioning** to **automated builds**, **monitoring**, **Azure**, **Ansible**, and **containers** for a multi-tier Java web application.
 
 ## What’s inside
 
@@ -9,6 +9,7 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
 - **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy.
 - **[project-5-ansible/](project-5-ansible/)** — AWX + Ansible Core on `awx01`, then playbooks for the five on-prem VMs.
+- **[project-6-containers/](project-6-containers/)** — same five roles as Docker images + Compose on a VirtualBox Ubuntu workstation.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -114,6 +115,17 @@ ansible-playbook -i ~/ansible/hosts.ini db.yml
 
 App: **http://192.168.56.11**. AWX UI (port-forward): **http://127.0.0.1:8088** (`admin`).
 
+## Quickstart — Project 6 (containers)
+
+Same app, five containers on the VirtualBox **ubuntu** workstation (Host-Only + NAT). Images on Docker Hub as `omarrmahgoub/vprofile-{app,db,web}:v1`.
+
+```bash
+cd ~/vprofile-docker/compose
+docker compose up -d
+```
+
+Laptop: **http://192.168.56.123** (`admin_vp` / `admin_vp`). First-time volume still needs the JDBC `GRANT` — see [project-6-containers/docs/compose-login.md](project-6-containers/docs/compose-login.md). `db01` uses `command: --skip-ssl` so a recreate keeps login working.
+
 ## Folder layout
 
 ```
@@ -135,7 +147,7 @@ devops-vprofile-lab/
 │  ├─ README.md
 │  ├─ manual/
 │  └─ automation/
-└─ project-4-azure/
+├─ project-4-azure/
    ├─ README.md
    ├─ docs/
    ├─ task1-manual/
@@ -146,11 +158,16 @@ devops-vprofile-lab/
       ├─ deploy/          # vprofile.json — all 4 VMs + Custom data
       ├─ scripts/
       └─ progress.md
-└─ project-5-ansible/
+├─ project-5-ansible/
+│  ├─ README.md
+│  ├─ task1-awx/          # Vagrant awx01 + AWX install
+│  ├─ task2-ansible-core/ # inventory + ping
+│  └─ task3-playbooks/    # db.yml … web.yml
+└─ project-6-containers/
    ├─ README.md
-   ├─ task1-awx/          # Vagrant awx01 + AWX install
-   ├─ task2-ansible-core/ # inventory + ping
-   └─ task3-playbooks/    # db.yml … web.yml
+   ├─ app/                # Tomcat Dockerfile
+   ├─ compose/            # docker-compose.yml (db01 --skip-ssl)
+   └─ docs/               # images, login GRANT + SSL
 ```
 
 ## Why manual first?
