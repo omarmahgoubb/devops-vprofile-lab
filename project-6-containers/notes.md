@@ -13,7 +13,8 @@ Controller/workstation: VirtualBox VM **ubuntu** (12 GB, 3 CPU, 40 GB disk).
 3. Test (`docker run`, **elinks** in the terminal)
 4. Push to Docker Hub
 5. `docker compose` (all five roles)
-6. Later: kubeadm cluster (3 Ubuntu VMs: 1 master + 2 workers)
+6. kubeadm: 3 Ubuntu VMs **Ready** (`k8s-master` `192.168.56.124`, `k8s-worker1`, `k8s-worker2`).
+7. Deploy the same Hub images with [k8s/vprofile.yaml](k8s/vprofile.yaml). Laptop: **http://192.168.56.124:30080/** (`admin_vp` / `admin_vp`).
 
 ## Images
 
@@ -32,3 +33,15 @@ Controller/workstation: VirtualBox VM **ubuntu** (12 GB, 3 CPU, 40 GB disk).
 - **Full test:** `docker compose up` with all services.
 - After first `up`, login needs extras: `GRANT` for JDBC `admin`, and MySQL `skip-ssl` (see [docs/compose-login.md](docs/compose-login.md)).
 - Laptop: `http://192.168.56.123` — form user `admin_vp` / `admin_vp`.
+
+## kubeadm
+
+- Runtime: **containerd** (not Docker; class CRI-O is the same idea).
+- Kubernetes **1.32** held with `apt-mark hold`.
+- Advertise Host-Only IP on `init` (not NAT `10.0.3.15`).
+- Pod CIDR `10.244.0.0/16` + Flannel (Calico default overlaps `192.168.56.0/24`).
+- Dual NIC: Flannel `--iface=enp0s3`; kubelet `--node-ip` = Host-Only ([docs/k8s-dual-nic.md](docs/k8s-dual-nic.md), [commands/15_k8s_fix_node_ip.md](commands/15_k8s_fix_node_ip.md)). Master InternalIP is `192.168.56.124`. Run the same `--node-ip` block on workers if they still show `10.0.3.15`.
+- Nginx: `resolver 10.96.0.10` (not the `kube-dns` hostname). `proxy_redirect` rewrites Spring `Location` to `:30080`.
+- GRANT is Job `db01-grant` in the YAML (do not rely on `kubectl exec` until `--node-ip` is Host-Only).
+- Commands we typed: `commands/10_*.md` … `15_*.md`.
+- Laptop kube: **http://192.168.56.124:30080/** — keep the port.

@@ -9,7 +9,7 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-3-monitoring-nagios/](project-3-monitoring-nagios/)** — same stack plus Nagios Core and NRPE (CPU / RAM / ping). Manual and automated.
 - **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy.
 - **[project-5-ansible/](project-5-ansible/)** — AWX + Ansible Core on `awx01`, then playbooks for the five on-prem VMs.
-- **[project-6-containers/](project-6-containers/)** — same five roles as Docker images + Compose on a VirtualBox Ubuntu workstation.
+- **[project-6-containers/](project-6-containers/)** — same five roles as Docker images + Compose, then the same Hub images on a 3-node kubeadm cluster.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -124,7 +124,9 @@ cd ~/vprofile-docker/compose
 docker compose up -d
 ```
 
-Laptop: **http://192.168.56.123** (`admin_vp` / `admin_vp`). First-time volume still needs the JDBC `GRANT` — see [project-6-containers/docs/compose-login.md](project-6-containers/docs/compose-login.md). `db01` uses `command: --skip-ssl` so a recreate keeps login working.
+Laptop Compose: **http://192.168.56.123** (`admin_vp` / `admin_vp`). First-time volume still needs the JDBC `GRANT` — see [project-6-containers/docs/compose-login.md](project-6-containers/docs/compose-login.md). `db01` uses `command: --skip-ssl` so a recreate keeps login working.
+
+Same images on kubeadm (3 Ubuntu VMs, Flannel). Manifest: [project-6-containers/k8s/vprofile.yaml](project-6-containers/k8s/vprofile.yaml). Laptop: **http://192.168.56.124:30080/** (keep the port). Dual-NIC gotchas: [project-6-containers/docs/k8s-dual-nic.md](project-6-containers/docs/k8s-dual-nic.md).
 
 ## Folder layout
 
@@ -165,10 +167,11 @@ devops-vprofile-lab/
 │  └─ task3-playbooks/    # db.yml … web.yml
 └─ project-6-containers/
    ├─ README.md
-   ├─ commands/           # what we typed on the ubuntu VM
+   ├─ commands/           # Compose 00–06, kubeadm 10–15
    ├─ app/                # Tomcat Dockerfile
    ├─ compose/            # docker-compose.yml (db01 --skip-ssl)
-   └─ docs/               # images, login GRANT + SSL
+   ├─ k8s/                # vprofile.yaml (Hub images, NodePort 30080)
+   └─ docs/               # images, login GRANT + SSL, dual-NIC
 ```
 
 ## Why manual first?

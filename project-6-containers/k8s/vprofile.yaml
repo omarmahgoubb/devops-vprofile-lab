@@ -1,0 +1,248 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vprofile
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db01
+  namespace: vprofile
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: db01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db01
+  namespace: vprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db01
+  template:
+    metadata:
+      labels:
+        app: db01
+    spec:
+      containers:
+        - name: db01
+          image: omarrmahgoub/vprofile-db:v1
+          args: ["--skip-ssl"]
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: admin123
+            - name: MYSQL_DATABASE
+              value: accounts
+            - name: MYSQL_USER
+              value: admin
+            - name: MYSQL_PASSWORD
+              value: admin123
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: dbdata
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: dbdata
+          emptyDir: {}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db01-grant
+  namespace: vprofile
+spec:
+  backoffLimit: 20
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: grant
+          image: omarrmahgoub/vprofile-db:v1
+          command: ["sh", "-c"]
+          args:
+            - |
+              until mysqladmin ping -h db01 -uroot -padmin123 --silent; do
+                echo waiting for mysql
+                sleep 3
+              done
+              mysql -h db01 -uroot -padmin123 -e "GRANT ALL ON accounts.* TO 'admin'@'%' IDENTIFIED BY 'admin123'; FLUSH PRIVILEGES;"
+              mysql -h db01 -uadmin -padmin123 accounts -e "SELECT username FROM user;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mc01
+  namespace: vprofile
+spec:
+  ports:
+    - port: 11211
+      targetPort: 11211
+  selector:
+    app: mc01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mc01
+  namespace: vprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mc01
+  template:
+    metadata:
+      labels:
+        app: mc01
+    spec:
+      containers:
+        - name: mc01
+          image: memcached
+          ports:
+            - containerPort: 11211
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rmq01
+  namespace: vprofile
+spec:
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: mgmt
+      port: 15672
+      targetPort: 15672
+  selector:
+    app: rmq01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rmq01
+  namespace: vprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rmq01
+  template:
+    metadata:
+      labels:
+        app: rmq01
+    spec:
+      containers:
+        - name: rmq01
+          image: rabbitmq
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: test
+            - name: RABBITMQ_DEFAULT_PASS
+              value: test
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app01
+  namespace: vprofile
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: app01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app01
+  namespace: vprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app01
+  template:
+    metadata:
+      labels:
+        app: app01
+    spec:
+      containers:
+        - name: app01
+          image: omarrmahgoub/vprofile-app:v1
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web01-nginx
+  namespace: vprofile
+data:
+  vproapp.conf: |
+    resolver 10.96.0.10 valid=10s ipv6=off;
+    server {
+        listen 80;
+        location / {
+            set $backend http://app01.vprofile.svc.cluster.local:8080;
+            proxy_pass $backend;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;w3e2
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_redirect ~^http://([^:/]+)/(.*)$ http://$1:30080/$2;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web01
+  namespace: vprofile
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+  selector:
+    app: web01
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web01
+  namespace: vprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web01
+  template:
+    metadata:
+      labels:
+        app: web01
+    spec:
+      containers:
+        - name: web01
+          image: omarrmahgoub/vprofile-web:v1
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/vproapp.conf
+              subPath: vproapp.conf
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: web01-nginx

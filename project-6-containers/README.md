@@ -15,7 +15,10 @@ Workstation: VirtualBox **ubuntu** (not Vagrant). SSH on Host-Only; Docker Hub n
 | **5** | [compose/](compose/) — five services | [commands/03_db_web.md](commands/03_db_web.md), [04_compose.md](commands/04_compose.md) |
 | **5b** | [docs/compose-login.md](docs/compose-login.md) — GRANT + `skip-ssl` | [commands/05_login.md](commands/05_login.md) |
 | **5c** | Push db + web images | [commands/06_push_db_web.md](commands/06_push_db_web.md) |
-| **Later** | kubeadm: 3 VMs (1 master, 2 workers), all Ubuntu | |
+| **6** | kubeadm master VM + node prep + `init` + Flannel | [10](commands/10_k8s_master_vm.md), [11](commands/11_k8s_node_prep.md), [12](commands/12_k8s_init_flannel.md) |
+| **7** | Worker VMs + `kubeadm join` | [13](commands/13_k8s_worker.md) — three nodes **Ready** |
+| **8** | Deploy vprofile (Hub images) | [14](commands/14_k8s_deploy.md), [k8s/vprofile.yaml](k8s/vprofile.yaml) |
+| **8b** | Dual-NIC: Flannel `--iface`, kubelet `--node-ip`, nginx `proxy_redirect` | [15](commands/15_k8s_fix_node_ip.md), [docs/k8s-dual-nic.md](docs/k8s-dual-nic.md) |
 
 Class Dockerfiles (from the session): [docs/class-dockerfiles.md](docs/class-dockerfiles.md).
 
@@ -30,4 +33,6 @@ Maven **does not need** MySQL. It only builds `vprofile-v2.war`.
 | `docker run` app only + elinks `:8080` | No | Tomcat serves the UI |
 | Login, accounts, cache | **Yes** | Compose + [login extras](docs/compose-login.md) (`admin` GRANT, MySQL `skip-ssl`) |
 
-Laptop URL is the VM Host-Only IP (`http://192.168.56.123`), not `127.0.0.1`. Web form: `admin_vp` / `admin_vp`.
+Laptop Compose URL: Host-Only `http://192.168.56.123` (not `127.0.0.1`).  
+Laptop kubeadm URL: **http://192.168.56.124:30080/** (NodePort; keep `:30080`).  
+Web form: `admin_vp` / `admin_vp`.
