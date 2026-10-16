@@ -1,0 +1,16 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/omarmahgoubb/devops-vprofile-lab.git'
+            }
+        }
+        stage('Manifest') {
+            steps {
+                sh 'ls -l project-6-containers/k8s && echo CI reached the deploy folder'
+            }
+        }
+    }
+}

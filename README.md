@@ -10,6 +10,7 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy.
 - **[project-5-ansible/](project-5-ansible/)** — AWX + Ansible Core on `awx01`, then playbooks for the five on-prem VMs.
 - **[project-6-containers/](project-6-containers/)** — same five roles as Docker images + Compose, then the same Hub images on a 3-node kubeadm cluster.
+- **[project-7-cicd/](project-7-cicd/)** — CI/CD for that cluster. Argo CD is in progress. Jenkins and GitHub Actions come after.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -128,6 +129,10 @@ Laptop Compose: **http://192.168.56.123** (`admin_vp` / `admin_vp`). First-time 
 
 Same images on kubeadm (3 Ubuntu VMs, Flannel). Manifest: [project-6-containers/k8s/vprofile.yaml](project-6-containers/k8s/vprofile.yaml). Laptop: **http://192.168.56.124:30080/** (keep the port). Dual-NIC gotchas: [project-6-containers/docs/k8s-dual-nic.md](project-6-containers/docs/k8s-dual-nic.md).
 
+## Quickstart — Project 7 (CI/CD, in progress)
+
+Argo CD on the kubeadm cluster. UI target: **http://192.168.56.124:30081** (`admin`). Steps typed so far: [project-7-cicd/commands/](project-7-cicd/commands/). Jenkins is not installed yet.
+
 ## Folder layout
 
 ```
@@ -165,13 +170,18 @@ devops-vprofile-lab/
 │  ├─ task1-awx/          # Vagrant awx01 + AWX install
 │  ├─ task2-ansible-core/ # inventory + ping
 │  └─ task3-playbooks/    # db.yml … web.yml
-└─ project-6-containers/
+├─ project-6-containers/
    ├─ README.md
    ├─ commands/           # Compose 00–06, kubeadm 10–15
    ├─ app/                # Tomcat Dockerfile
    ├─ compose/            # docker-compose.yml (db01 --skip-ssl)
    ├─ k8s/                # vprofile.yaml (Hub images, NodePort 30080)
    └─ docs/               # images, login GRANT + SSL, dual-NIC
+└─ project-7-cicd/
+   ├─ README.md
+   ├─ notes.md
+   ├─ progress.md
+   └─ commands/           # cluster recovery, Argo CD install
 ```
 
 ## Why manual first?
