@@ -10,7 +10,8 @@ This monorepo documents my journey from **manual provisioning** to **automated b
 - **[project-4-azure/](project-4-azure/)** — same app on Azure (no Nginx). Task 1 manual. Task 2 one-file Custom data deploy.
 - **[project-5-ansible/](project-5-ansible/)** — AWX + Ansible Core on `awx01`, then playbooks for the five on-prem VMs.
 - **[project-6-containers/](project-6-containers/)** — same five roles as Docker images + Compose, then the same Hub images on a 3-node kubeadm cluster.
-- **[project-7-cicd/](project-7-cicd/)** — CI/CD for that cluster. Argo CD is in progress. Jenkins and GitHub Actions come after.
+- **[project-7-cicd/](project-7-cicd/)** — Argo CD syncs the kubeadm YAML. Jenkins checkout pipeline succeeded. GitHub Actions not started.
+- **[project-8-fullcycle/](project-8-fullcycle/)** — Azure full cycle. Jenkins to ACR, then Argo CD, then the same flow with `kubectl`. Grafana Lab overview on the same cluster.
 - **[docs/](docs/)** — architecture, ports, and monitoring notes.
 
 ## Stack and bring-up order
@@ -131,7 +132,11 @@ Same images on kubeadm (3 Ubuntu VMs, Flannel). Manifest: [project-6-containers/
 
 ## Quickstart — Project 7 (CI/CD, in progress)
 
-Argo CD on the kubeadm cluster. UI target: **http://192.168.56.124:30081** (`admin`). Steps typed so far: [project-7-cicd/commands/](project-7-cicd/commands/). Jenkins is not installed yet.
+Argo CD on the kubeadm cluster. UI target: **http://192.168.56.124:30081** (`admin`). Jenkins: **http://192.168.56.124:30082**. Steps: [project-7-cicd/commands/](project-7-cicd/commands/).
+
+## Quickstart — Project 8 (full cycle, done)
+
+Private app repo: **https://github.com/omarmahgoubb/vprofile** (`57ff559`). Azure resource group `rg-vprofile-k8s` held the master `40.87.97.146`, the worker `23.100.22.38`, and ACR `acrvprofilel8.azurecr.io`. Deleting that group removes the VMs, disks, public IPs, and the registry. Notes: [project-8-fullcycle/](project-8-fullcycle/).
 
 ## Folder layout
 
@@ -177,11 +182,16 @@ devops-vprofile-lab/
    ├─ compose/            # docker-compose.yml (db01 --skip-ssl)
    ├─ k8s/                # vprofile.yaml (Hub images, NodePort 30080)
    └─ docs/               # images, login GRANT + SSL, dual-NIC
-└─ project-7-cicd/
+├─ project-7-cicd/
+│  ├─ README.md
+│  ├─ notes.md
+│  ├─ progress.md
+│  └─ commands/           # cluster recovery, Argo CD, Jenkins
+└─ project-8-fullcycle/
    ├─ README.md
    ├─ notes.md
    ├─ progress.md
-   └─ commands/           # cluster recovery, Argo CD install
+   └─ commands/           # private app repo
 ```
 
 ## Why manual first?
